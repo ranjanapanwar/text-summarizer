@@ -8,4 +8,4 @@ jobs:
     - name: Push to Space
       env:
         HF_TOKEN: ${{ secrets.HF_TOKEN }}
-      run: git push https://hf:$HF_TOKEN@huggingface.co/spaces/ranjanapanwar/text-summarizer main
+      run: git push --force https://hf:$HF_TOKEN@huggingface.co/spaces/ranjanapanwar/text-summarizer main
