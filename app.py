@@ -1,40 +1,44 @@
 import gradio as gr
-from transformers import T5Tokenizer, T5ForConditionalGeneration
+import os
+import groq
+from groq import Groq
+from dotenv import load_dotenv
 
-#Load T5 model 
-model = T5ForConditionalGeneration.from_pretrained("t5-small")
-tokenizer = T5Tokenizer.from_pretrained("t5-small")
+load_dotenv()
+key = os.environ.get("GROQ_API_KEY")
+client = Groq(api_key=key)
 
 def summarize(text):
+
     if not text.strip():
         return "Please enter text to summarize"
     
-    # Preprocess with "summarize: " prefix
-    inputs = tokenizer.encode("summarize: "+ text, 
-                              return_tensors="pt",
-                              max_length=512,
-                              truncation=True)
-
-    # Generate summary
-    summary_ids = model.generate(inputs, 
-                                 max_length=150,
-                                 min_length=30,
-                                 num_beams=4,
-                                 length_penalty=2.0,
-                                 early_stopping=True) 
-    
-    summary = tokenizer.decode(summary_ids[0],
-                               skip_special_tokens=True)
-    
-    return summary
+    try:
+        messages = [
+            {"role": "system", "content": "You need to summarize the input, make sure the length is not greater than 150 and you need to give bullet points"},
+            {"role": "user", "content": text}
+        ]
+        
+        response = client.chat.completions.create(
+            model = "llama-3.1-8b-instant",
+            messages = messages
+        )
+        return response.choices[0].message.content
+    except groq.AuthenticationError:
+        return "Invalid API key"
+    except groq.RateLimitError:
+        return "Too many requests, try again"
+    except Exception as e:
+        return "Error: " + str(e)
+        
 
 # Gradio interface
 iface = gr.Interface(
     fn = summarize,
     inputs=gr.Textbox(lines=8, placeholder="Paste your article/text here...", label="Input Text"),
     outputs=gr.Textbox(label="Summary"),
-    title="AI Text Summarizer (T5)",
-    description = "Powered by google's T5-small model"
+    title="AI Text Summarizer",
+    description = "Powered by Groq/LLaMA"
 )
 
 if __name__ == "__main__":
